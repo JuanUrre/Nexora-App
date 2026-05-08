@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#f4f6fb">
+<title>Nexora · Mantenimiento de Equipos</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  /* Nexora Light — claro, profesional, agradable */
+  --bg:#f4f6fb; --bg2:#ffffff; --bg3:#eef1f8; --bg4:#e4e9f4;
+  --b1:rgba(56,100,220,0.08); --b2:rgba(56,100,220,0.18); --b3:rgba(56,100,220,0.45);
+  --text:#0f1d3a; --muted:#c2cbdf; --m2:#6b7fa8; --m3:#475f8c;
+  --acc:#2563eb; --acc2:#1a4fca; --achi:#1d4ed8;
+  --adim:rgba(37,99,235,0.08); --aglow:rgba(37,99,235,0.20);
+  --cyan:#0ea5e9; --red:#ef4444; --amber:#f59e0b; --green:#10b981;
+  --r:14px; --rs:8px;
+  --hh:54px;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);}
+body{font-family:'Outfit',sans-serif;color:var(--text);position:relative;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:radial-gradient(circle,rgba(37,99,235,0.12) 1px,transparent 1px);
+  background-size:32px 32px;}
+body::after{content:'';position:fixed;left:0;right:0;height:1px;z-index:1;pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(37,99,235,0.15),rgba(14,165,233,0.1),transparent);
+  animation:scan 9s linear infinite;}
+@keyframes scan{from{top:-1px}to{top:100vh}}
+
+/* ── HEADER ── */
+#hdr{position:fixed;top:0;left:0;right:0;z-index:800;height:var(--hh);
+  background:rgba(244,246,251,0.97);backdrop-filter:blur(24px);
+  border-bottom:1px solid var(--b1);
+  display:flex;align-items:center;justify-content:space-between;padding:0 20px;}
+.logo{font-family:'Space Mono',monospace;font-size:17px;font-weight:700;
+  display:flex;align-items:center;gap:9px;cursor:pointer;letter-spacing:-0.5px;}
+.lhex{width:32px;height:32px;border-radius:8px;background:var(--adim);border:0.5px solid var(--b3);
+  display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--acc);
+  box-shadow:0 0 14px var(--aglow);animation:hpulse 3s infinite;}
+@keyframes hpulse{0%,100%{box-shadow:0 0 10px var(--aglow)}50%{box-shadow:0 0 22px var(--aglow),0 0 44px rgba(56,140,255,0.1)}}
+.lword em{color:var(--acc);font-style:normal;}
+.hright{display:flex;align-items:center;gap:10px;}
+.hbadge{background:linear-gradient(135deg,rgba(37,99,235,0.1),rgba(14,165,233,0.07));
+  border:0.5px solid var(--b3);border-radius:20px;padding:4px 12px;
+  font-size:10px;color:var(--achi);letter-spacing:1px;font-family:'Space Mono',monospace;}
+.hloc{font-size:11px;color:var(--m2);font-family:'Space Mono',monospace;
+  display:flex;align-items:center;gap:4px;}
+
+/* ── PROGRESS ── */
+#pgw{position:fixed;top:var(--hh);left:0;right:0;z-index:799;height:3px;background:rgba(56,140,255,0.06);}
+#pgf{height:100%;background:linear-gradient(90deg,var(--acc),var(--cyan));
+  box-shadow:0 0 8px var(--aglow);width:0%;transition:width 0.5s cubic-bezier(0.4,0,0.2,1);}
+
+/* ── SCREENS ── */
+#screens{position:fixed;top:var(--hh);left:0;right:0;bottom:0;overflow:hidden;z-index:2;}
+.scr{position:absolute;top:0;left:0;right:0;bottom:0;
+  overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
+  padding:20px 20px 80px;opacity:0;pointer-events:none;
+  transform:translateX(100%);
+  transition:transform 0.4s cubic-bezier(0.4,0,0.2,1),opacity 0.4s;
+  will-change:transform,opacity;background:var(--bg);}
+.scr.active{opacity:1;pointer-events:all;transform:translateX(0);}
+
+/* ── STEP BAR ── */
+.steps{display:flex;margin-bottom:24px;gap:0;position:relative;background:#fff;border-radius:var(--r);padding:14px 10px;box-shadow:0 1px 6px rgba(37,99,235,0.06);}
+.steps::before{content:'';position:absolute;top:14px;left:14px;right:14px;height:1px;
+  background:var(--b1);z-index:0;}
+.step{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;position:relative;z-index:1;background:transparent;}
+.sn{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--b1);background:var(--bg2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-family:'Space Mono',monospace;transition:all 0.3s;color:var(--m2);}
+.step.act .sn{background:var(--acc);color:#fff;border-color:var(--acc);
+  box-shadow:0 0 0 4px rgba(56,140,255,0.15),0 0 12px var(--aglow);}
+.step.done .sn{background:var(--green);color:var(--bg);border-color:var(--green);}
+.step.done .sn::after{content:'✓';font-size:12px;}
+.step.done .sn span{display:none;}
+.sl{font-size:9px;color:#6b7fa8;font-family:'Space Mono',monospace;letter-spacing:0.5px;
+  text-transform:uppercase;transition:color 0.3s;}
+.step.act .sl{color:var(--achi);}
+.step.done .sl{color:var(--green);}
+
+/* ── FOOTER ── */
+#ftr{position:fixed;bottom:0;left:0;right:0;z-index:800;
+  background:rgba(244,246,251,0.97);backdrop-filter:blur(20px);
+  border-top:1px solid var(--b1);
+  display:flex;align-items:center;gap:10px;padding:12px 20px;height:66px;}
+
+/* ── BUTTONS ── */
+.btnp{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;border:none;
+  border-radius:var(--rs);padding:14px 20px;font-size:13px;
+  font-family:'Space Mono',monospace;font-weight:700;cursor:pointer;
+  transition:all 0.2s;text-transform:uppercase;letter-spacing:0.5px;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;flex:1;
+  box-shadow:0 4px 20px rgba(56,140,255,0.25);}
+.btnp:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 24px rgba(56,140,255,0.35);}
+.btnp:disabled{opacity:0.2;cursor:default;box-shadow:none;transform:none;}
+.btnp:active:not(:disabled){transform:scale(0.98);}
+.btns{background:#ffffff;color:var(--m3);border:1px solid var(--b2);
+  border-radius:var(--rs);padding:14px 16px;font-size:12px;
+  font-family:'Space Mono',monospace;cursor:pointer;transition:all 0.15s;
+  display:inline-flex;align-items:center;justify-content:center;
+  text-transform:uppercase;letter-spacing:0.5px;}
+.btns:hover{border-color:var(--b3);color:var(--achi);}
+
+/* ── CARDS ── */
+.card{background:var(--bg2);border:1px solid var(--b1);border-radius:var(--r);box-shadow:0 1px 6px rgba(37,99,235,0.06);
+  padding:16px;margin-bottom:14px;}
+.cl{font-size:10px;color:#6b7fa8;letter-spacing:1.5px;text-transform:uppercase;
+  font-family:'Space Mono',monospace;font-weight:700;margin-bottom:14px;display:flex;
+  align-items:center;gap:8px;}
+.cl::after{content:'';flex:1;height:0.5px;background:linear-gradient(90deg,var(--b2),transparent);}
+.secl{font-size:10px;color:#6b7fa8;letter-spacing:1.5px;text-transform:uppercase;
+  font-family:'Space Mono',monospace;font-weight:700;margin-bottom:14px;
+  display:flex;align-items:center;gap:8px;}
+.secl::after{content:'';flex:1;height:0.5px;background:linear-gradient(90deg,var(--b2),transparent);}
+
+/* ══════════════════════════════
+   SCREEN 0: HERO
+══════════════════════════════ */
+.hero-wrap{padding:8px 0 20px;}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:8px;
+  background:linear-gradient(135deg,rgba(37,99,235,0.08),rgba(14,165,233,0.05));
+  border:0.5px solid var(--b3);border-radius:20px;padding:6px 14px;
+  font-size:10px;color:var(--achi);letter-spacing:2px;text-transform:uppercase;
+  font-family:'Space Mono',monospace;margin-bottom:20px;}
+.hdot{width:6px;height:6px;border-radius:50%;background:var(--acc);
+  box-shadow:0 0 6px var(--aglow);animation:pd 2s infinite;}
+@keyframes pd{0%,100%{opacity:1}50%{opacity:0.3}}
+
+.hero-h1{font-size:clamp(30px,8vw,52px);font-weight:900;line-height:1.0;
+  letter-spacing:-2px;margin-bottom:14px;}
+.hero-h1 .line1{display:block;color:#0f1d3a;}
+.hero-h1 .line2{display:block;color:#2563eb;}
+.hero-h1 .line3{display:block;
+  background:linear-gradient(135deg,var(--acc),var(--cyan));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+
+.hero-sub{font-size:15px;color:#475f8c;line-height:1.7;margin-bottom:24px;}
+.hero-sub strong{color:#0f1d3a;}
+
+/* trust badges */
+.trust-row{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;}
+.trust-badge{display:flex;align-items:center;gap:6px;
+  background:#ffffff;border:1px solid var(--b1);border-radius:20px;box-shadow:0 1px 4px rgba(37,99,235,0.06);
+  padding:6px 12px;font-size:12px;color:var(--m3);}
+.trust-badge .ti{font-size:14px;color:#0f1d3a;}
+.trust-badge strong{color:#0f1d3a;}
+
+/* stats */
+.stats-g{display:grid;grid-template-columns:repeat(4,1fr);
+  background:#ffffff;border:1px solid var(--b1);border-radius:var(--r);box-shadow:0 1px 6px rgba(37,99,235,0.06);
+  overflow:hidden;margin-bottom:20px;}
+.stat-i{padding:14px 8px;text-align:center;border-right:0.5px solid var(--b1);}
+.stat-i:last-child{border-right:none;}
+.stn{font-family:'Space Mono',monospace;font-size:18px;font-weight:700;
+  background:linear-gradient(135deg,#2563eb,#0ea5e9);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.stl{font-size:10px;color:#6b7fa8;margin-top:3px;}
+
+/* symptoms */
+.syg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px;}
+.sy{background:#ffffff;border:1px solid var(--b1);border-radius:var(--r);box-shadow:0 1px 4px rgba(37,99,235,0.06);
+  padding:14px 12px;transition:transform 0.2s,border-color 0.2s;}
+.sy:hover{transform:translateY(-2px);}
+.sy.r{border-color:rgba(255,68,102,0.2);}
+.sy.a{border-color:rgba(255,170,0,0.2);}
+.sy.b{border-color:rgba(56,140,255,0.22);}
+.si{font-size:18px;margin-bottom:7px;}
+.st2{font-size:12px;font-weight:700;margin-bottom:3px;}
+.sy.r .st2{color:var(--red);} .sy.a .st2{color:var(--amber);} .sy.b .st2{color:var(--achi);}
+.sd{font-size:11px;color:#6b7fa8;line-height:1.4;}
+
+/* terminal */
+.term{background:#1e293b;border:0.5px solid rgba(37,99,235,0.3);border-radius:var(--r);
+  overflow:hidden;margin-bottom:20px;}
+.term-bar{background:#0f172a;padding:8px 12px;display:flex;align-items:center;gap:6px;
+  border-bottom:0.5px solid var(--b1);}
+.tdot{width:9px;height:9px;border-radius:50%;}
+.ttl{font-family:'Space Mono',monospace;font-size:10px;color:var(--m2);margin-left:4px;flex:1;}
+.tstatus{font-family:'Space Mono',monospace;font-size:10px;color:#34d399;
+  display:flex;align-items:center;gap:5px;}
+.tstatus::before{content:'';width:5px;height:5px;border-radius:50%;
+  background:var(--green);box-shadow:0 0 5px var(--green);}
+.term-body{padding:14px;background:#1e293b;border-radius:0 0 var(--r) var(--r);}
+.tl{font-family:'Space Mono',monospace;font-size:12px;line-height:2;color:#94a3b8;}
+.tl.red{color:#f87171;} .tl.amb{color:#fbbf24;} .tl.blu{color:#60a5fa;}
+.tl.dim{color:rgba(100,116,139,0.4);}
+.tcur{animation:blink 1s infinite;color:#38bdf8;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* ══════════════════════════════
+   SCREEN 1: PLANES
+══════════════════════════════ */
+.plan-intro{text-align:center;margin-bottom:20px;}
+.plan-intro h2{font-size:22px;font-weight:800;letter-spacing:-0.5px;margin-bottom:6px;}
+.plan-intro p{font-size:13px;color:#6b7fa8;}
+
+.pc{background:var(--bg2);border:1.5px solid var(--b1);border-radius:var(--r);box-shadow:0 2px 10px rgba(37,99,235,0.05);
+  padding:18px;margin-bottom:12px;cursor:pointer;position:relative;overflow:hidden;
+  transition:all 0.25s;}
+.pc:hover{border-color:var(--b2);transform:translateY(-2px);box-shadow:0 8px 30px rgba(56,140,255,0.08);}
+.pc.sel{border-color:var(--acc);box-shadow:0 0 0 3px rgba(56,140,255,0.12),0 8px 30px rgba(56,140,255,0.12);}
+.pc.feat{border-color:rgba(56,140,255,0.3);}
+.pc-glow{position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--acc),var(--cyan));
+  opacity:0;transition:opacity 0.25s;}
+.pc.sel .pc-glow,.pc.feat .pc-glow{opacity:1;}
+.pc-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;}
+.pbadge{display:inline-flex;align-items:center;gap:5px;
+  background:linear-gradient(135deg,var(--acc),var(--cyan));
+  color:#fff;font-size:9px;font-weight:700;padding:3px 10px;border-radius:20px;
+  font-family:'Space Mono',monospace;letter-spacing:1px;margin-bottom:8px;}
+.pchk{width:22px;height:22px;border-radius:6px;border:1.5px solid var(--b2);
+  display:flex;align-items:center;justify-content:center;transition:all 0.2s;flex-shrink:0;}
+.pc.sel .pchk{background:var(--acc);border-color:var(--acc);box-shadow:0 0 10px var(--aglow);}
+.pc.sel .pchk::after{content:'✓';font-size:11px;color:#fff;font-weight:700;}
+.pn{font-size:20px;font-weight:900;letter-spacing:-0.5px;margin-bottom:2px;color:#0f1d3a;}
+.ps{font-size:11px;color:#6b7fa8;font-family:'Space Mono',monospace;margin-bottom:12px;}
+.pp-wrap{display:flex;align-items:baseline;gap:6px;margin-bottom:14px;}
+.pp-val{font-family:'Space Mono',monospace;font-size:22px;font-weight:700;color:var(--acc);}
+.pp-unit{font-size:11px;color:#6b7fa8;}
+.pp-save{font-size:11px;color:var(--green);font-weight:600;
+  background:rgba(0,221,168,0.1);padding:2px 8px;border-radius:10px;margin-left:4px;}
+.pfs{display:flex;flex-direction:column;gap:6px;}
+.pf{font-size:12px;color:#475f8c;display:flex;align-items:center;gap:8px;line-height:1.3;}
+.pf-icon{width:16px;height:16px;border-radius:4px;background:rgba(56,140,255,0.1);
+  display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;}
+.pc.sel .pf-icon{background:rgba(56,140,255,0.2);}
+.pf.no{color:rgba(74,106,158,0.45);}
+.pf.no .pf-icon{background:rgba(30,48,96,0.3);opacity:0.5;}
+
+/* ══════════════════════════════
+   SCREEN 2: COTIZADOR
+══════════════════════════════ */
+.counter-row{display:flex;align-items:center;gap:16px;}
+.cbtn{width:40px;height:40px;border-radius:50%;background:#ffffff;
+  border:1.5px solid var(--b2);color:var(--text);font-size:22px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:all 0.15s;user-select:none;}
+.cbtn:hover:not(:disabled){border-color:var(--acc);color:var(--acc);}
+.cbtn:active:not(:disabled){transform:scale(0.92);background:var(--adim);}
+.cbtn:disabled{opacity:0.15;cursor:default;}
+.cnum{font-family:'Space Mono',monospace;font-size:36px;font-weight:700;color:var(--acc);
+  min-width:40px;text-align:center;transition:transform 0.15s;}
+.cnum.bump{animation:bump 0.2s ease;}
+@keyframes bump{0%{transform:scale(1)}50%{transform:scale(1.2)}100%{transform:scale(1)}}
+
+.fwrap{display:flex;flex-direction:column;gap:6px;}
+.fo{display:flex;align-items:center;justify-content:space-between;
+  padding:12px 14px;border:1.5px solid var(--b1);border-radius:var(--rs);background:#fff;
+  cursor:pointer;transition:all 0.15s;position:relative;overflow:hidden;}
+.fo::before{content:'';position:absolute;inset:0;background:var(--adim);opacity:0;transition:opacity 0.2s;}
+.fo:hover::before{opacity:1;}
+.fo.sel{border-color:var(--acc);}
+.fo.sel::before{opacity:1;}
+.fo-left{display:flex;align-items:center;gap:10px;}
+.fo-radio{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--b2);
+  display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0;}
+.fo.sel .fo-radio{border-color:var(--acc);}
+.fo.sel .fo-radio::after{content:'';width:8px;height:8px;border-radius:50%;background:var(--acc);}
+.fl{font-size:13px;position:relative;z-index:1;}
+.fd{font-size:11px;color:var(--cyan);font-family:'Space Mono',monospace;font-weight:700;
+  position:relative;z-index:1;}
+
+/* toggle */
+.tog{width:42px;height:24px;border-radius:12px;background:#d1d9ef;
+  border:1.5px solid var(--b2);cursor:pointer;position:relative;transition:all 0.2s;flex-shrink:0;}
+.tog.on{background:linear-gradient(135deg,var(--acc),var(--acc2));border-color:var(--acc);
+  box-shadow:0 0 10px var(--aglow);}
+.tog::after{content:'';position:absolute;width:17px;height:17px;border-radius:50%;
+  background:#fff;top:2px;left:2px;transition:left 0.2s;
+  box-shadow:0 1px 3px rgba(0,0,0,0.3);}
+.tog.on::after{left:21px;}
+.ar{display:flex;align-items:center;justify-content:space-between;
+  padding:12px 0;border-bottom:0.5px solid var(--b1);}
+.ar:last-child{border-bottom:none;}
+.ai{flex:1;}
+.at{font-size:13px;font-weight:500;color:#0f1d3a;}
+.as{font-size:11px;color:var(--m2);margin-top:2px;}
+.ap{font-size:11px;color:#6b7fa8;font-family:'Space Mono',monospace;margin-right:10px;}
+
+/* price box */
+.pbox{background:linear-gradient(135deg,#ffffff,#f0f4ff);
+  border:0.5px solid var(--b2);border-radius:var(--r);
+  padding:18px;margin-bottom:14px;position:relative;overflow:hidden;}
+.pbox::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--acc),var(--cyan));}
+.prow{display:flex;justify-content:space-between;font-size:12px;color:#475f8c;
+  padding:5px 0;font-family:'Space Mono',monospace;}
+.prow.gr{color:var(--green);}
+.prow.cy{color:var(--cyan);}
+.pdiv{border:none;border-top:1px solid #e4e9f4;margin:10px 0;}
+.ptr{display:flex;justify-content:space-between;align-items:center;}
+.ptl{font-size:13px;color:#475f8c;}
+.ptv{font-family:'Space Mono',monospace;font-size:28px;font-weight:700;color:#0f1d3a;
+  transition:color 0.3s;}
+.ptv.updated{animation:priceflash 0.4s ease;}
+@keyframes priceflash{0%{color:var(--cyan)}100%{color:var(--text)}}
+
+.phi{display:flex;align-items:center;gap:8px;
+  background:rgba(16,185,129,0.07);border:0.5px solid rgba(16,185,129,0.2);
+  border-radius:var(--rs);padding:10px 14px;font-size:12px;color:var(--green);margin-top:12px;}
+
+/* ══════════════════════════════
+   SCREEN 3: CALENDARIO
+══════════════════════════════ */
+.cal-intro{text-align:center;margin-bottom:16px;}
+.cal-intro h3{font-size:18px;font-weight:800;letter-spacing:-0.3px;margin-bottom:4px;}
+.cal-intro p{font-size:12px;color:#6b7fa8;}
+
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.cnv{background:var(--bg3);border:1px solid var(--b2);color:var(--text);border-radius:var(--rs);
+  width:34px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:18px;transition:all 0.15s;}
+.cnv:hover{background:var(--adim);border-color:var(--b3);}
+.ct{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:#1d4ed8;}
+.cdow{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:6px;}
+.cdow span{font-size:10px;color:#6b7fa8;text-align:center;padding:3px 0;
+  font-family:'Space Mono',monospace;}
+.cgr{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.db{aspect-ratio:1;background:transparent;border:1.5px solid transparent;border-radius:var(--rs);
+  color:var(--text);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all 0.15s;font-family:'Outfit',sans-serif;font-weight:500;}
+.db:hover:not(.dis){background:var(--bg3);border-color:var(--b2);}
+.db.sel{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;font-weight:700;
+  border-color:transparent;box-shadow:0 4px 12px rgba(56,140,255,0.3);}
+.db.dis{opacity:0.15;cursor:default;}
+.db.tod{border-color:var(--b3);color:var(--achi);}
+
+/* hours */
+.hrs-guide{background:rgba(37,99,235,0.05);border:0.5px solid var(--b1);border-radius:var(--rs);
+  padding:10px 14px;font-size:12px;color:var(--m3);margin-bottom:12px;
+  display:flex;align-items:center;gap:8px;}
+.hrs-guide::before{content:'👆';font-size:14px;}
+.hph{font-size:12px;color:#6b7fa8;font-family:'Space Mono',monospace;padding:8px 0;text-align:center;}
+.hwr{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.hb{padding:10px 8px;background:#ffffff;border:1.5px solid var(--b1);border-radius:var(--rs);
+  color:var(--text);font-size:12px;cursor:pointer;transition:all 0.15s;
+  font-family:'Space Mono',monospace;text-align:center;display:flex;flex-direction:column;gap:2px;}
+.hb-time{font-size:12px;font-weight:700;}
+.hb-lbl{font-size:9px;color:#6b7fa8;letter-spacing:0.5px;}
+.hb:hover:not(.taken){border-color:var(--acc);color:var(--achi);}
+.hb.sel{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;
+  border-color:transparent;box-shadow:0 4px 12px rgba(56,140,255,0.3);}
+.hb.sel .hb-lbl{color:rgba(255,255,255,0.7);}
+.hb.taken{opacity:0.2;cursor:default;}
+.hb.taken .hb-lbl{color:var(--red);}
+
+.date-confirm{background:linear-gradient(135deg,rgba(16,185,129,0.08),rgba(37,99,235,0.05));
+  border:0.5px solid rgba(0,221,168,0.2);border-radius:var(--rs);
+  padding:12px 14px;font-family:'Space Mono',monospace;font-size:12px;color:var(--green);
+  display:none;margin-top:12px;line-height:1.6;animation:fadein 0.3s;}
+@keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ══════════════════════════════
+   SCREEN 4: FORMULARIO
+══════════════════════════════ */
+.form-intro{text-align:center;margin-bottom:20px;}
+.form-intro h3{font-size:18px;font-weight:800;letter-spacing:-0.3px;margin-bottom:4px;}
+.form-intro p{font-size:12px;color:#6b7fa8;}
+
+.sb{background:var(--bg2);border:1px solid var(--b1);border-radius:var(--r);padding:14px;margin-bottom:16px;box-shadow:0 1px 6px rgba(37,99,235,0.05);}
+.sr{display:flex;justify-content:space-between;align-items:flex-start;
+  padding:7px 0;border-bottom:0.5px solid var(--b1);}
+.sr:last-child{border-bottom:none;}
+.sk{color:#6b7fa8;font-family:'Space Mono',monospace;font-size:10px;
+  text-transform:uppercase;letter-spacing:1px;flex-shrink:0;margin-right:10px;margin-top:1px;}
+.sv{color:#0f1d3a;text-align:right;font-size:13px;word-break:break-word;max-width:62%;font-weight:500;}
+.sv.cy{color:var(--cyan);font-family:'Space Mono',monospace;}
+.sv.gr{color:var(--green);}
+
+/* form fields */
+.fg{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;position:relative;}
+.fg label{font-size:11px;color:#475f8c;letter-spacing:0.5px;font-weight:600;
+  display:flex;align-items:center;gap:6px;}
+.fg label .req{color:var(--acc);font-size:13px;line-height:1;}
+.fi{background:#ffffff;border:1.5px solid var(--b2);border-radius:var(--rs);
+  padding:12px 14px;color:var(--text);font-size:15px;font-family:'Outfit',sans-serif;
+  outline:none;transition:all 0.2s;width:100%;}
+.fi:focus{border-color:var(--b3);box-shadow:0 0 0 3px rgba(56,140,255,0.08);background:var(--bg2);}
+.fi.valid{border-color:rgba(0,221,168,0.4);}
+.fi.invalid{border-color:rgba(255,68,102,0.4);}
+.fi::placeholder{color:#b0bbcf;}
+textarea.fi{resize:none;height:72px;}
+.field-hint{font-size:11px;color:var(--m2);margin-top:2px;display:flex;align-items:center;gap:5px;}
+.field-hint.ok{color:var(--green);}
+.field-hint.err{color:var(--red);}
+
+/* ══════════════════════════════
+   SCREEN 5: CONFIRMACIÓN
+══════════════════════════════ */
+.conf-hero{text-align:center;padding:20px 0 24px;}
+.conf-badge{
+  width:80px;height:80px;border-radius:20px;
+  background:linear-gradient(135deg,rgba(37,99,235,0.1),rgba(14,165,233,0.06));
+  border:1.5px solid var(--b3);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 16px;font-size:32px;
+  box-shadow:0 0 40px var(--aglow),0 0 80px rgba(56,140,255,0.06);
+  animation:confpop 0.5s cubic-bezier(0.17,0.67,0.35,1.3);}
+@keyframes confpop{from{transform:scale(0) rotate(-10deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+.conf-ref{display:inline-flex;align-items:center;gap:6px;
+  background:var(--bg3);border:1px solid var(--b1);border-radius:var(--rs);
+  padding:4px 14px;font-family:'Space Mono',monospace;
+  font-size:11px;color:var(--m2);margin-bottom:14px;letter-spacing:1.5px;}
+.conf-h{font-size:26px;font-weight:900;letter-spacing:-0.5px;margin-bottom:6px;color:#0f1d3a;}
+.conf-sub{font-size:14px;color:#6b7fa8;line-height:1.7;margin-bottom:0;}
+.conf-sub strong{color:var(--achi);}
+
+/* send status pills */
+.spl{display:flex;align-items:center;gap:8px;font-size:12px;padding:10px 14px;
+  border-radius:var(--rs);font-family:'Space Mono',monospace;margin-bottom:8px;border:0.5px solid;
+  transition:all 0.3s;}
+.spl.ok{background:rgba(0,221,168,0.07);color:var(--green);border-color:rgba(0,221,168,0.2);}
+.spl.warn{background:rgba(255,170,0,0.07);color:var(--amber);border-color:rgba(255,170,0,0.2);}
+.spl.err{background:rgba(255,68,102,0.07);color:var(--red);border-color:rgba(255,68,102,0.2);}
+.spl.ld{background:rgba(37,99,235,0.04);color:#6b7fa8;border-color:var(--b1);}
+.spin{width:12px;height:12px;border:1.5px solid rgba(56,140,255,0.15);
+  border-top-color:var(--acc);border-radius:50%;animation:sp 0.7s linear infinite;flex-shrink:0;}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* prep list */
+.prep{display:flex;flex-direction:column;gap:8px;}
+.prep-i{font-size:13px;color:#475f8c;display:flex;gap:10px;align-items:flex-start;line-height:1.4;}
+.prep-num{width:20px;height:20px;border-radius:6px;background:rgba(37,99,235,0.08);border:0.5px solid var(--b1);
+  display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--acc);
+  font-family:'Space Mono',monospace;flex-shrink:0;margin-top:1px;}
+
+/* nxline */
+.nxl{height:1px;background:linear-gradient(90deg,transparent,rgba(37,99,235,0.3),rgba(14,165,233,0.2),transparent);
+  margin:18px 0;opacity:0.25;}
+
+/* ── CONFIG MODAL ── */
+#cfgm{display:none;position:fixed;inset:0;z-index:2000;background:rgba(244,246,251,0.99);
+  overflow-y:auto;padding:68px 20px 80px;}
+.cbanner{font-family:'Space Mono',monospace;font-size:11px;color:#92400e;
+  background:rgba(251,191,36,0.08);border:0.5px solid rgba(251,191,36,0.25);
+  border-radius:var(--r);padding:14px;margin-bottom:16px;line-height:1.8;}
+.cg{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;}
+.cg label{font-size:10px;color:#475f8c;letter-spacing:1px;text-transform:uppercase;font-family:'Space Mono',monospace;}
+.cg input{background:#ffffff;border:1px solid var(--b2);border-radius:var(--rs);
+  padding:11px 13px;color:var(--text);font-size:13px;font-family:'Space Mono',monospace;
+  outline:none;transition:border-color 0.15s;width:100%;}
+.cg input:focus{border-color:var(--b3);}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:76px;left:50%);
+  transform:translateX(-50%) translateY(60px);
+  background:#ffffff;border:1px solid var(--b1);box-shadow:0 4px 20px rgba(37,99,235,0.12);
+  border-radius:var(--r);padding:12px 20px;
+  font-size:12px;font-family:'Space Mono',monospace;
+  z-index:3000;opacity:0;transition:all 0.35s cubic-bezier(0.17,0.67,0.35,1.1);
+  white-space:nowrap;max-width:88vw;text-align:center;
+  display:flex;align-items:center;gap:8px;}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+#toast.ok{border-color:rgba(0,221,168,0.3);color:var(--green);}
+#toast.err{border-color:rgba(255,68,102,0.3);color:var(--red);}
+#toast.info{border-color:rgba(56,140,255,0.3);color:var(--achi);}
+
+/* ── ANIMATIONS ── */
+@keyframes fu{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.fu{animation:fu 0.4s both;}
+.fu1{animation-delay:.05s}.fu2{animation-delay:.12s}.fu3{animation-delay:.19s}
+.fu4{animation-delay:.26s}.fu5{animation-delay:.33s}.fu6{animation-delay:.40s}
+
+/* ── RESPONSIVE ── */
+@media(min-width:640px){
+  .scr{padding:24px 40px 80px;}
+  #hdr{padding:0 40px;}
+  #ftr{padding:12px 40px;}
+  .hwr{grid-template-columns:repeat(4,1fr);}
+  .hero-h1{font-size:clamp(36px,5vw,56px);}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="hdr">
+  <div class="logo" id="logo">
+    <div class="lhex">⬡</div>
+    <span class="lword">Nexo<em>ra</em></span>
+  </div>
+  <div class="hright">
+    <div class="hloc">📍 <span>Apartadó</span></div>
+    <div class="hbadge">MANTENIMIENTO PREVENTIVO</div>
+  </div>
+</div>
+
+<!-- PROGRESS -->
+<div id="pgw"><div id="pgf"></div></div>
+
+<!-- SCREENS -->
+<div id="screens">
+
+<!-- ══ S0: HERO ══ -->
+<div class="scr active" id="s0">
+  <div class="hero-wrap">
+    <div class="fu fu1"><div class="hero-eyebrow"><span class="hdot"></span>Nexora · Apartadó · Antioquia</div></div>
+
+    <h1 class="hero-h1 fu fu2">
+      <span class="line1">Equipos lentos</span>
+      <span class="line2">cuestan más</span>
+      <span class="line3">de lo que crees.</span>
+    </h1>
+
+    <p class="hero-sub fu fu3">
+      Mantenimiento profesional desde <strong>$70.000</strong> · Domicilio <strong style="color:var(--green)">gratis</strong> en Apartadó.<br>
+      Más de 300 equipos atendidos · Respuesta en 24h.
+    </p>
+
+    <div class="trust-row fu fu3">
+      <div class="trust-badge"><span class="ti">🛡️</span><span><strong>Garantía</strong> de servicio</span></div>
+      <div class="trust-badge"><span class="ti">⚡</span><span><strong>24h</strong> respuesta</span></div>
+      <div class="trust-badge"><span class="ti">🚗</span><span><strong>Domicilio</strong> gratis</span></div>
+    </div>
+
+    <div class="stats-g fu fu4">
+      <div class="stat-i"><div class="stn">$70k</div><div class="stl">Desde</div></div>
+      <div class="stat-i"><div class="stn">$0</div><div class="stl">Domicilio</div></div>
+      <div class="stat-i"><div class="stn">+300</div><div class="stl">Equipos</div></div>
+      <div class="stat-i"><div class="stn">98%</div><div class="stl">Satisfacción</div></div>
+    </div>
+
+    <div class="syg fu fu5">
+      <div class="sy r">
+        <div class="si">🌡️</div>
+        <div class="st2">Sobrecalor</div>
+        <div class="sd">El polvo destruye en silencio.</div>
+      </div>
+      <div class="sy a">
+        <div class="si">🐌</div>
+        <div class="st2">Lentitud</div>
+        <div class="sd">Cada segundo = dinero perdido.</div>
+      </div>
+      <div class="sy b">
+        <div class="si">💾</div>
+        <div class="st2">Pérdida datos</div>
+        <div class="sd">Un disco no avisa. Simplemente falla.</div>
+      </div>
+    </div>
+
+    <div class="term fu fu6">
+      <div class="term-bar">
+        <div class="tdot" style="background:#ff5f57"></div>
+        <div class="tdot" style="background:#febc2e"></div>
+        <div class="tdot" style="background:#28c840"></div>
+        <span class="ttl">nexora_diagnóstico.exe</span>
+        <span class="tstatus">EN LÍNEA</span>
+      </div>
+      <div class="term-body">
+        <div class="tl red">✗  CPU Temp : <strong>89°C</strong>  ← CRÍTICO</div>
+        <div class="tl amb">⚡  Disco    : fragmentado <strong>67%</strong></div>
+        <div class="tl amb">⚡  Fans     : <strong>obstruidos</strong></div>
+        <div class="tl dim">───────────────────────────</div>
+        <div class="tl blu">✓  Con mantenimiento Nexora: +3 años de vida <span class="tcur">█</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ S1: PLANES ══ -->
+<div class="scr" id="s1">
+  <div class="steps fu fu1">
+    <div class="step act" id="st1"><div class="sn"><span>1</span></div><span class="sl">Plan</span></div>
+    <div class="step" id="st2"><div class="sn"><span>2</span></div><span class="sl">Config</span></div>
+    <div class="step" id="st3"><div class="sn"><span>3</span></div><span class="sl">Fecha</span></div>
+    <div class="step" id="st4"><div class="sn"><span>4</span></div><span class="sl">Datos</span></div>
+    <div class="step" id="st5"><div class="sn"><span>5</span></div><span class="sl">Listo</span></div>
+  </div>
+
+  <div class="plan-intro fu fu2">
+    <h2>¿Cuántos equipos tienes?</h2>
+    <p>Elige el plan que se adapta a tu operación</p>
+  </div>
+
+  <!-- BÁSICO -->
+  <div class="pc fu fu3" id="pc-basico" onclick="pickPlan('basico')">
+    <div class="pc-glow"></div>
+    <div class="pc-top">
+      <div>
+        <div class="pn">Básico</div>
+        <div class="ps">Hasta 5 equipos · semestral</div>
+      </div>
+      <div class="pchk" id="pchk-basico"></div>
+    </div>
+    <div class="pp-wrap">
+      <span class="pp-val">$70k</span>
+      <span class="pp-unit">/ equipo / visita</span>
+    </div>
+    <div class="pfs">
+      <div class="pf"><div class="pf-icon">🧹</div>Limpieza física completa</div>
+      <div class="pf"><div class="pf-icon">🔍</div>Diagnóstico de hardware</div>
+      <div class="pf"><div class="pf-icon">⚙️</div>Optimización del sistema</div>
+      <div class="pf"><div class="pf-icon">🛡️</div>Escaneo de virus</div>
+      <div class="pf no"><div class="pf-icon">📡</div>Soporte remoto</div>
+      <div class="pf no"><div class="pf-icon">📄</div>Informe mensual</div>
+    </div>
+  </div>
+
+  <!-- EMPRESARIAL -->
+  <div class="pc feat fu fu4" id="pc-empresarial" onclick="pickPlan('empresarial')">
+    <div class="pc-glow"></div>
+    <div class="pbadge">⭐ MÁS POPULAR</div>
+    <div class="pc-top">
+      <div>
+        <div class="pn">Empresarial</div>
+        <div class="ps">6 a 30 equipos · trimestral</div>
+      </div>
+      <div class="pchk" id="pchk-empresarial"></div>
+    </div>
+    <div class="pp-wrap">
+      <span class="pp-val">$65k</span>
+      <span class="pp-unit">/ equipo / visita</span>
+      <span class="pp-save">Ahorras $5k/eq</span>
+    </div>
+    <div class="pfs">
+      <div class="pf"><div class="pf-icon">✅</div>Todo lo del plan Básico</div>
+      <div class="pf"><div class="pf-icon">📡</div>Soporte remoto ilimitado</div>
+      <div class="pf"><div class="pf-icon">📄</div>Informe mensual por equipo</div>
+      <div class="pf"><div class="pf-icon">🎯</div>Descuento automático −10%</div>
+      <div class="pf no"><div class="pf-icon">👨‍🔧</div>Técnico exclusivo</div>
+      <div class="pf no"><div class="pf-icon">🔧</div>Reposición de piezas</div>
+    </div>
+  </div>
+
+  <!-- CORPORATIVO -->
+  <div class="pc fu fu5" id="pc-corporativo" onclick="pickPlan('corporativo')">
+    <div class="pc-glow"></div>
+    <div class="pc-top">
+      <div>
+        <div class="pn">Corporativo</div>
+        <div class="ps">+30 equipos · contrato a medida</div>
+      </div>
+      <div class="pchk" id="pchk-corporativo"></div>
+    </div>
+    <div class="pp-wrap">
+      <span class="pp-val" style="font-size:18px">A medida</span>
+      <span class="pp-unit">/ contrato</span>
+    </div>
+    <div class="pfs">
+      <div class="pf"><div class="pf-icon">✅</div>Todo lo del plan Empresarial</div>
+      <div class="pf"><div class="pf-icon">👨‍🔧</div>Técnico asignado exclusivo</div>
+      <div class="pf"><div class="pf-icon">📋</div>SLA garantizado</div>
+      <div class="pf"><div class="pf-icon">🔧</div>Reposición de piezas incluida</div>
+      <div class="pf"><div class="pf-icon">💻</div>Panel de gestión en línea</div>
+      <div class="pf"><div class="pf-icon">💰</div>Precio negociado</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ S2: COTIZADOR ══ -->
+<div class="scr" id="s2">
+  <div class="steps fu fu1">
+    <div class="step done" id="s2-st1"><div class="sn"><span>1</span></div><span class="sl">Plan</span></div>
+    <div class="step act" id="s2-st2"><div class="sn"><span>2</span></div><span class="sl">Config</span></div>
+    <div class="step" id="s2-st3"><div class="sn"><span>3</span></div><span class="sl">Fecha</span></div>
+    <div class="step" id="s2-st4"><div class="sn"><span>4</span></div><span class="sl">Datos</span></div>
+    <div class="step" id="s2-st5"><div class="sn"><span>5</span></div><span class="sl">Listo</span></div>
+  </div>
+
+  <div class="card fu fu2">
+    <span class="cl">Número de equipos</span>
+    <div class="counter-row">
+      <button class="cbtn" id="cminus" onclick="changeEq(-1)">−</button>
+      <span class="cnum" id="eqn">1</span>
+      <button class="cbtn" id="cplus" onclick="changeEq(1)">+</button>
+      <span id="emaxl" style="font-size:11px;color:var(--m2);font-family:'Space Mono',monospace;margin-left:4px;"></span>
+    </div>
+    <div style="margin-top:10px;font-size:12px;color:var(--m2);font-family:'Space Mono',monospace;">
+      <span style="color:var(--acc);" id="bpl">$70.000</span> por equipo · por visita
+    </div>
+  </div>
+
+  <div class="card fu fu3" id="freqcard">
+    <span class="cl">Frecuencia de mantenimiento</span>
+    <div class="fwrap">
+      <div class="fo sel" onclick="pickFreq(this,1,0)">
+        <div class="fo-left"><div class="fo-radio"></div><span class="fl">1 visita semestral</span></div>
+        <span class="fd" style="color:var(--m2)">BASE</span>
+      </div>
+      <div class="fo" onclick="pickFreq(this,2,10)">
+        <div class="fo-left"><div class="fo-radio"></div><span class="fl">2 visitas anuales</span></div>
+        <span class="fd">−10%</span>
+      </div>
+      <div class="fo" onclick="pickFreq(this,4,18)">
+        <div class="fo-left"><div class="fo-radio"></div><span class="fl">Trimestral · 4 visitas/año</span></div>
+        <span class="fd">−18%</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card fu fu4">
+    <span class="cl">Servicios adicionales</span>
+    <div class="ar">
+      <div class="ai">
+        <div class="at">Soporte remoto</div>
+        <div class="as">Asistencia por videollamada o acceso remoto entre visitas</div>
+      </div>
+      <span class="ap">+$80k</span>
+      <button class="tog" id="togr" onclick="togA('r',80000)"></button>
+    </div>
+    <div class="ar">
+      <div class="ai">
+        <div class="at">Respaldo en la nube</div>
+        <div class="as">Copia de seguridad automática mensual de tus datos</div>
+      </div>
+      <span class="ap">+$60k</span>
+      <button class="tog" id="togb" onclick="togA('b',60000)"></button>
+    </div>
+    <div class="ar">
+      <div class="ai">
+        <div class="at">Informe técnico PDF</div>
+        <div class="as">Reporte detallado del estado de cada equipo tras la visita</div>
+      </div>
+      <span class="ap">+$40k</span>
+      <button class="tog" id="togi" onclick="togA('i',40000)"></button>
+    </div>
+  </div>
+
+  <div class="pbox fu fu5">
+    <div class="prow"><span id="pbl">Mantenimiento base</span><span id="pbv">$70.000</span></div>
+    <div class="prow gr"><span>🚗 Domicilio en Apartadó</span><span>GRATIS</span></div>
+    <div class="prow" id="prr" style="display:none"><span>Soporte remoto</span><span>$80.000</span></div>
+    <div class="prow" id="prb" style="display:none"><span>Respaldo nube</span><span>$60.000</span></div>
+    <div class="prow" id="pri" style="display:none"><span>Informe PDF</span><span>$40.000</span></div>
+    <div class="prow cy" id="prd" style="display:none"><span id="pdl">Descuento</span><span id="pdv">−$0</span></div>
+    <div class="pdiv"></div>
+    <div class="ptr">
+      <span class="ptl">Total del servicio / año</span>
+      <span class="ptv" id="ptot">$80.000</span>
+    </div>
+    <div class="phi">✓ Precio final · Sin cobros extra · Domicilio incluido gratis</div>
+  </div>
+</div>
+
+<!-- ══ S3: CALENDARIO ══ -->
+<div class="scr" id="s3">
+  <div class="steps fu fu1">
+    <div class="step done"><div class="sn"><span>1</span></div><span class="sl">Plan</span></div>
+    <div class="step done"><div class="sn"><span>2</span></div><span class="sl">Config</span></div>
+    <div class="step act"><div class="sn"><span>3</span></div><span class="sl">Fecha</span></div>
+    <div class="step"><div class="sn"><span>4</span></div><span class="sl">Datos</span></div>
+    <div class="step"><div class="sn"><span>5</span></div><span class="sl">Listo</span></div>
+  </div>
+
+  <div class="cal-intro fu fu2">
+    <h3>¿Cuándo te queda bien?</h3>
+    <p>Atendemos de lunes a sábado en Apartadó</p>
+  </div>
+
+  <div class="card fu fu3">
+    <div class="ch">
+      <button class="cnv" onclick="chMes(-1)">‹</button>
+      <span class="ct" id="calt"></span>
+      <button class="cnv" onclick="chMes(1)">›</button>
+    </div>
+    <div class="cdow">
+      <span>Lun</span><span>Mar</span><span>Mié</span>
+      <span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span>
+    </div>
+    <div class="cgr" id="calg"></div>
+  </div>
+
+  <div class="card fu fu4" id="hrs-card" style="display:none">
+    <span class="cl">Selecciona la hora</span>
+    <div class="hrs-guide">Elige el horario que más te convenga</div>
+    <div id="hwr" class="hwr"></div>
+    <div class="date-confirm" id="dconf"></div>
+  </div>
+
+  <div class="card fu fu4" id="hrs-waiting" style="margin-top:0">
+    <div style="text-align:center;padding:16px;color:var(--m2);font-size:13px;">
+      <div style="font-size:24px;margin-bottom:8px">👆</div>
+      Selecciona un día en el calendario para ver los horarios disponibles
+    </div>
+  </div>
+</div>
+
+<!-- ══ S4: FORMULARIO ══ -->
+<div class="scr" id="s4">
+  <div class="steps fu fu1">
+    <div class="step done"><div class="sn"><span>1</span></div><span class="sl">Plan</span></div>
+    <div class="step done"><div class="sn"><span>2</span></div><span class="sl">Config</span></div>
+    <div class="step done"><div class="sn"><span>3</span></div><span class="sl">Fecha</span></div>
+    <div class="step act"><div class="sn"><span>4</span></div><span class="sl">Datos</span></div>
+    <div class="step"><div class="sn"><span>5</span></div><span class="sl">Listo</span></div>
+  </div>
+
+  <div class="form-intro fu fu2">
+    <h3>Casi listo 🎯</h3>
+    <p>Solo necesitamos saber dónde encontrarte</p>
+  </div>
+
+  <div class="sb fu fu3" id="form-summary">
+    <div class="sr"><span class="sk">Plan</span><span class="sv" id="sump">—</span></div>
+    <div class="sr"><span class="sk">Equipos</span><span class="sv" id="sume">—</span></div>
+    <div class="sr"><span class="sk">Fecha</span><span class="sv" id="sumd">—</span></div>
+    <div class="sr"><span class="sk">Total</span><span class="sv cy" id="sumt">—</span></div>
+    <div class="sr"><span class="sk">Domicilio</span><span class="sv gr">GRATIS ✓</span></div>
+  </div>
+
+  <div class="card fu fu4">
+    <div class="fg">
+      <label>Nombre completo <span class="req">*</span></label>
+      <input class="fi" id="fn" placeholder="Tu nombre completo" oninput="validateField(this,'name')">
+      <span class="field-hint" id="fh-fn"></span>
+    </div>
+    <div class="fg">
+      <label>WhatsApp / Teléfono <span class="req">*</span></label>
+      <input class="fi" id="ft" type="tel" placeholder="3001234567" oninput="validateField(this,'tel')">
+      <span class="field-hint" id="fh-ft"></span>
+    </div>
+    <div class="fg">
+      <label>Correo electrónico <span class="req">*</span></label>
+      <input class="fi" id="fe" type="email" placeholder="correo@ejemplo.com" oninput="validateField(this,'email')">
+      <span class="field-hint" id="fh-fe"></span>
+    </div>
+    <div class="fg">
+      <label>Dirección en Apartadó <span class="req">*</span></label>
+      <input class="fi" id="fd" placeholder="Cra. 100 # 96-45, Barrio El Centro..." oninput="validateField(this,'dir')">
+      <span class="field-hint" id="fh-fd"></span>
+    </div>
+    <div class="fg" style="margin-bottom:0">
+      <label>Observaciones <span style="color:var(--m2);font-size:10px">(opcional)</span></label>
+      <textarea class="fi" id="fo" placeholder="Marca del equipo, síntoma específico, instrucciones de acceso..."></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- ══ S5: CONFIRMACIÓN ══ -->
+<div class="scr" id="s5">
+  <div class="steps fu fu1">
+    <div class="step done"><div class="sn"><span>1</span></div><span class="sl">Plan</span></div>
+    <div class="step done"><div class="sn"><span>2</span></div><span class="sl">Config</span></div>
+    <div class="step done"><div class="sn"><span>3</span></div><span class="sl">Fecha</span></div>
+    <div class="step done"><div class="sn"><span>4</span></div><span class="sl">Datos</span></div>
+    <div class="step act"><div class="sn"><span>5</span></div><span class="sl">Listo</span></div>
+  </div>
+
+  <div class="conf-hero fu fu1">
+    <div class="conf-badge">⬡</div>
+    <div class="conf-ref" id="cref">DIAG-000000</div>
+    <div class="conf-h">¡Cita agendada! 🎉</div>
+    <div class="conf-sub">
+      Te esperamos en tu dirección.<br>
+      Confirmación enviada por <strong>correo</strong> y <strong>WhatsApp</strong>.
+    </div>
+  </div>
+
+  <div class="nxl"></div>
+
+  <div class="fu fu2" style="margin-bottom:14px">
+    <div id="stem" class="spl ld"><span class="spin"></span><span>Enviando confirmación por correo...</span></div>
+    <div id="stwa" class="spl ld"><span class="spin"></span><span>Enviando WhatsApp...</span></div>
+  </div>
+
+  <div class="secl fu fu3">Comprobante</div>
+  <div class="sb fu fu3">
+    <div class="sr"><span class="sk">Ref</span><span class="sv cy" id="cref2">—</span></div>
+    <div class="sr"><span class="sk">Cliente</span><span class="sv" id="cnom">—</span></div>
+    <div class="sr"><span class="sk">Teléfono</span><span class="sv" id="ctel">—</span></div>
+    <div class="sr"><span class="sk">Correo</span><span class="sv" id="cem" style="font-size:11px">—</span></div>
+    <div class="sr"><span class="sk">Fecha</span><span class="sv" id="cfch">—</span></div>
+    <div class="sr"><span class="sk">Dirección</span><span class="sv" id="cdir">—</span></div>
+    <div class="sr"><span class="sk">Plan</span><span class="sv" id="cpln">—</span></div>
+    <div class="sr"><span class="sk">Total</span><span class="sv cy" id="ctot">—</span></div>
+    <div class="sr"><span class="sk">Domicilio</span><span class="sv gr">GRATIS ✓</span></div>
+  </div>
+
+  <div class="card fu fu4">
+    <span class="cl">Prepárate para la visita</span>
+    <div class="prep">
+      <div class="prep-i"><div class="prep-num">1</div>Ten el equipo encendido y con acceso disponible</div>
+      <div class="prep-i"><div class="prep-num">2</div>Clave de administrador a mano si aplica</div>
+      <div class="prep-i"><div class="prep-num">3</div>El técnico lleva carné Nexora para identificarse</div>
+      <div class="prep-i"><div class="prep-num">4</div>Te contactamos el día anterior para confirmar la hora exacta</div>
+      <div class="prep-i"><div class="prep-num">5</div>Duración estimada: 1 a 2 horas por equipo</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /screens -->
+
+<!-- FOOTER -->
+<div id="ftr">
+  <button class="btns" id="btnback" onclick="navBack()" style="display:none">← Atrás</button>
+  <button class="btnp" id="btnnext" onclick="navNext()">COTIZAR AHORA →</button>
+</div>
+
+<!-- CONFIG -->
+<div id="cfgm">
+  <div class="cbanner"><strong>⚙️ Credenciales Nexora</strong><br>Triple clic en el logo para acceder a este panel.</div>
+  <div class="cg"><label>EmailJS Public Key</label><input id="ck" placeholder="Tu Public Key"></div>
+  <div class="cg"><label>EmailJS Service ID</label><input id="cs" placeholder="service_xxxxxxx"></div>
+  <div class="cg"><label>EmailJS Template ID</label><input id="ctp" placeholder="template_xxxxxxx"></div>
+  <div class="cg"><label>CallMeBot API Key</label><input id="ccb" placeholder="Tu API Key"></div>
+  <div class="cg"><label>WhatsApp empresa (con código país)</label><input id="cwa" placeholder="573001234567"></div>
+  <div style="display:flex;gap:10px;margin-top:10px">
+    <button class="btnp" style="flex:1" onclick="saveCfg()">GUARDAR</button>
+    <button class="btns" onclick="document.getElementById('cfgm').style.display='none'">CERRAR</button>
+  </div>
+</div>
+
+<div id="toast"><span id="tmsg"></span></div>
+
+<script>
+// ── CREDENTIALS ──
+var cfg={
+  k:'0CskXLDJtHkQF48B6',
+  s:'service_c2kosw7',
+  tp:'template_vsys3d9',
+  cb:'6668453',
+  wa:'573017888635'
+};
+
+// ── SUPABASE ──
+var db=supabase.createClient(
+  'https://gbyhvgzwrufvvnwokzez.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdieWh2Z3p3cnVmdnZud29remV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNDM2NzUsImV4cCI6MjA5MjcxOTY3NX0.F_e6t19ozmrmgHPXOpUDEr5bOkae8Si7Lo1zFgPW4hw'
+);
+
+// ── CONFIG ──
+function loadCfg(){var d=localStorage.getItem('nxr3');if(d)Object.assign(cfg,JSON.parse(d));}
+function saveCfg(){
+  cfg.k=document.getElementById('ck').value.trim();
+  cfg.s=document.getElementById('cs').value.trim();
+  cfg.tp=document.getElementById('ctp').value.trim();
+  cfg.cb=document.getElementById('ccb').value.trim();
+  cfg.wa=document.getElementById('cwa').value.trim();
+  localStorage.setItem('nxr3',JSON.stringify(cfg));
+  toast('✓ Guardado','ok');
+  document.getElementById('cfgm').style.display='none';
+}
+function openCfg(){
+  loadCfg();
+  document.getElementById('ck').value=cfg.k;
+  document.getElementById('cs').value=cfg.s;
+  document.getElementById('ctp').value=cfg.tp;
+  document.getElementById('ccb').value=cfg.cb;
+  document.getElementById('cwa').value=cfg.wa;
+  document.getElementById('cfgm').style.display='block';
+}
+loadCfg();
+
+var lc=0,lt=0;
+document.getElementById('logo').addEventListener('click',function(){
+  var n=Date.now();if(n-lt>900)lc=0;lt=n;lc++;
+  if(lc>=3){lc=0;openCfg();}
+});
+
+// ── NAVIGATION ──
+var cur=0, TOTAL=6;
+var PROG=[0,16,33,50,66,100];
+var BTXT=['COTIZAR AHORA →','CONTINUAR →','VER MI COTIZACIÓN →','CONFIRMAR FECHA →','FINALIZAR RESERVA →','HACER OTRA COTIZACIÓN'];
+
+function goTo(n,dir){
+  if(n<0||n>=TOTAL)return;
+  var ce=document.getElementById('s'+cur);
+  var ne=document.getElementById('s'+n);
+  ce.style.transition='transform 0.38s cubic-bezier(0.4,0,0.2,1),opacity 0.38s';
+  ce.style.transform=dir>0?'translateX(-38%)':'translateX(100%)';
+  ce.style.opacity='0';ce.style.pointerEvents='none';
+  ne.style.transition='none';
+  ne.style.transform=dir>0?'translateX(100%)':'translateX(-38%)';
+  ne.style.opacity='0';ne.style.display='block';
+  requestAnimationFrame(function(){requestAnimationFrame(function(){
+    ne.style.transition='transform 0.4s cubic-bezier(0.4,0,0.2,1),opacity 0.4s';
+    ne.style.transform='translateX(0)';ne.style.opacity='1';ne.style.pointerEvents='all';
+    ne.querySelectorAll('[class*="fu"]').forEach(function(el){
+      var cl=el.className;el.style.animation='none';void el.offsetWidth;el.className=cl;
+    });
+  });});
+  setTimeout(function(){
+    ce.className=ce.className.replace(' active','');ce.style.cssText='';
+    if(ne.className.indexOf('active')<0)ne.className+=' active';
+    ne.style.cssText='';
+  },420);
+  cur=n;
+  document.getElementById('pgf').style.width=PROG[n]+'%';
+  updateFtr();
+  setTimeout(function(){document.getElementById('s'+n).scrollTop=0;},50);
+}
+
+function updateFtr(){
+  var back=document.getElementById('btnback');
+  var next=document.getElementById('btnnext');
+  next.textContent=BTXT[cur]||'CONTINUAR →';
+  back.style.display=(cur>0&&cur<5)?'flex':'none';
+  next.disabled=(cur===1&&!selPlan);
+}
+function navNext(){
+  if(cur===0){goTo(1,1);return;}
+  if(cur===1){if(!selPlan){toast('⚠️ Selecciona un plan para continuar','err');return;}setupCot();goTo(2,1);return;}
+  if(cur===2){goTo(3,1);renderCal();return;}
+  if(cur===3){if(!selDay||!selHour){toast('⚠️ Elige un día y una hora','err');return;}fillSum();goTo(4,1);return;}
+  if(cur===4){enviar();return;}
+  if(cur===5){resetAll();return;}
+}
+function navBack(){if(cur>0&&cur<5)goTo(cur-1,-1);}
+
+// ── STATE ──
+var selPlan=null,eqs=1,freqN=1,freqDisc=0;
+var addons={r:false,b:false,i:false};
+var AP={r:80000,b:60000,i:40000};
+var PB={basico:70000,empresarial:65000,corporativo:0};
+var PMAX={basico:5,empresarial:30,corporativo:9999};
+var PFLBL={1:'1 visita semestral',2:'2 visitas anuales',4:'Trimestral · 4/año'};
+var selDay=null,selMon=null,selYr=null,selHour=null;
+var vY=2026,vM=3;
+var MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+var DIAS=['lunes','martes','miércoles','jueves','viernes','sábado'];
+var TAKEN={5:[9,14],7:[10,11],10:[9,13],14:[14,15],17:[9]};
+var HRS=[9,10,11,13,14,15,16];
+
+// ── PLAN ──
+function pickPlan(p){
+  selPlan=p;
+  ['basico','empresarial','corporativo'].forEach(function(k){
+    document.getElementById('pc-'+k).classList.toggle('sel',k===p);
+  });
+  document.getElementById('btnnext').disabled=false;
+}
+function setupCot(){
+  var max=PMAX[selPlan];
+  var base=PB[selPlan];
+  document.getElementById('emaxl').textContent='máx '+(max>50?'ilimitado':max);
+  document.getElementById('bpl').textContent=base?'$'+base.toLocaleString('es-CO'):'Personalizado';
+  document.getElementById('freqcard').style.display=selPlan==='corporativo'?'none':'block';
+  eqs=Math.min(eqs,max);
+  document.getElementById('eqn').textContent=eqs;
+  document.getElementById('cminus').disabled=eqs<=1;
+  document.getElementById('cplus').disabled=eqs>=max;
+  recalc();
+}
+
+// ── COTIZADOR ──
+function fmt(n){return'$'+Math.round(n).toLocaleString('es-CO');}
+function calcTot(){
+  if(selPlan==='corporativo')return null;
+  var base=(PB[selPlan]||0)*eqs*freqN;
+  var at=0;['r','b','i'].forEach(function(k){if(addons[k])at+=AP[k];});
+  return(base+at)*(1-freqDisc/100);
+}
+function recalc(){
+  if(!selPlan)return;
+  if(selPlan==='corporativo'){
+    document.getElementById('ptot').textContent='A medida';
+    return;
+  }
+  var base=(PB[selPlan]||0)*eqs*freqN;
+  var at=0;['r','b','i'].forEach(function(k){if(addons[k])at+=AP[k];});
+  var sub=base+at;
+  var disc=sub*freqDisc/100;
+  var tot=sub-disc;
+  document.getElementById('pbl').textContent='Mantto ('+eqs+(eqs===1?' equipo':' equipos')+' × '+PFLBL[freqN]+')';
+  document.getElementById('pbv').textContent=fmt(base);
+  if(freqDisc>0){
+    document.getElementById('prd').style.display='';
+    document.getElementById('pdl').textContent='Descuento ('+freqDisc+'%)';
+    document.getElementById('pdv').textContent='−'+fmt(disc);
+  }else document.getElementById('prd').style.display='none';
+  var ptv=document.getElementById('ptot');
+  ptv.textContent=fmt(tot);
+  ptv.classList.remove('updated');void ptv.offsetWidth;ptv.classList.add('updated');
+
+}
+function changeEq(d){
+  var max=PMAX[selPlan||'basico'];
+  eqs=Math.min(max,Math.max(1,eqs+d));
+  var el=document.getElementById('eqn');
+  el.textContent=eqs;
+  el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump');
+  document.getElementById('cminus').disabled=eqs<=1;
+  document.getElementById('cplus').disabled=eqs>=max;
+  recalc();
+}
+function pickFreq(el,n,d){
+  document.querySelectorAll('.fo').forEach(function(e){e.classList.remove('sel');});
+  el.classList.add('sel');freqN=n;freqDisc=d;recalc();
+}
+function togA(k,price){
+  addons[k]=!addons[k];
+  document.getElementById('tog'+k).classList.toggle('on',addons[k]);
+  document.getElementById('pr'+k).style.display=addons[k]?'':'none';
+  recalc();
+}
+
+// ── CALENDAR ──
+function renderCal(){
+  document.getElementById('calt').textContent=MESES[vM]+' '+vY;
+  var g=document.getElementById('calg');g.innerHTML='';
+  var today=new Date(2026,3,23);
+  var firstDow=(new Date(vY,vM,1).getDay()+6)%7;
+  var days=new Date(vY,vM+1,0).getDate();
+  for(var i=0;i<firstDow;i++)g.appendChild(document.createElement('div'));
+  for(var d=1;d<=days;d++){
+    (function(day){
+      var btn=document.createElement('button');
+      btn.className='db';btn.textContent=day;
+      var dt=new Date(vY,vM,day);
+      if(dt<=today||dt.getDay()===0){btn.classList.add('dis');}
+      else{
+        if(dt.toDateString()===today.toDateString())btn.classList.add('tod');
+        if(selDay===day&&selMon===vM&&selYr===vY)btn.classList.add('sel');
+        btn.onclick=function(){pickDay(day,btn);};
+      }
+      g.appendChild(btn);
+    })(d);
+  }
+}
+function chMes(d){
+  vM+=d;if(vM>11){vM=0;vY++;}if(vM<0){vM=11;vY--;}
+  selDay=null;selHour=null;
+  renderCal();
+  document.getElementById('hrs-card').style.display='none';
+  document.getElementById('hrs-waiting').style.display='block';
+  document.getElementById('dconf').style.display='none';
+}
+function pickDay(d,btn){
+  selDay=d;selMon=vM;selYr=vY;selHour=null;
+  document.querySelectorAll('.db').forEach(function(b){b.classList.remove('sel');});
+  btn.classList.add('sel');
+  document.getElementById('hrs-waiting').style.display='none';
+  document.getElementById('hrs-card').style.display='block';
+  renderHrs(d);
+  document.getElementById('dconf').style.display='none';
+  // scroll to hours
+  setTimeout(function(){
+    document.getElementById('hrs-card').scrollIntoView({behavior:'smooth',block:'nearest'});
+  },100);
+}
+function renderHrs(d){
+  var tk=TAKEN[d]||[];
+  var w=document.getElementById('hwr');w.innerHTML='';
+  var slots=[
+    {h:9,l:'Mañana'},{h:10,l:'Mañana'},{h:11,l:'Mañana'},
+    {h:13,l:'Tarde'},{h:14,l:'Tarde'},{h:15,l:'Tarde'},{h:16,l:'Tarde'}
+  ];
+  slots.forEach(function(s){
+    var btn=document.createElement('button');
+    btn.className='hb'+(tk.indexOf(s.h)>=0?' taken':'');
+    btn.innerHTML='<span class="hb-time">'+s.h+':00</span><span class="hb-lbl">'+(tk.indexOf(s.h)>=0?'Ocupado':s.l)+'</span>';
+    if(tk.indexOf(s.h)<0){
+      (function(hour,b){b.onclick=function(){pickHr(hour,b);};})(s.h,btn);
+    }
+    if(selHour===s.h)btn.classList.add('sel');
+    w.appendChild(btn);
+  });
+}
+function pickHr(h,btn){
+  selHour=h;
+  document.querySelectorAll('.hb').forEach(function(b){b.classList.remove('sel');});
+  btn.classList.add('sel');
+  var dt=new Date(selYr,selMon,selDay);
+  var di=(dt.getDay()+6)%7;
+  var lbl='📅 '+DIAS[di]+' '+selDay+' de '+MESES[selMon]+' · '+h+':00 – '+(h+2)+':00 hs';
+  var b=document.getElementById('dconf');
+  b.innerHTML='✓ '+lbl;b.style.display='block';
+}
+function getFecha(){
+  if(!selDay)return'—';
+  var dt=new Date(selYr,selMon,selDay);
+  var di=(dt.getDay()+6)%7;
+  return DIAS[di]+' '+selDay+' de '+MESES[selMon]+' de '+selYr+' · '+selHour+':00';
+}
+
+// ── FIELD VALIDATION ──
+function validateField(el,type){
+  var v=el.value.trim();
+  var hint=document.getElementById('fh-'+el.id);
+  if(!hint)return;
+  var ok=false,msg='';
+  if(type==='name'){ok=v.length>=3;msg=ok?'✓ Nombre válido':'Mínimo 3 caracteres';}
+  else if(type==='tel'){ok=/^[0-9]{7,12}$/.test(v.replace(/\s/g,''));msg=ok?'✓ Número válido':'Solo números, 7-12 dígitos';}
+  else if(type==='email'){ok=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);msg=ok?'✓ Correo válido':'Formato: nombre@dominio.com';}
+  else if(type==='dir'){ok=v.length>=8;msg=ok?'✓ Dirección registrada':'Incluye calle, número y barrio';}
+  el.classList.toggle('valid',ok&&v.length>0);
+  el.classList.toggle('invalid',!ok&&v.length>0);
+  hint.textContent=v.length>0?msg:'';
+  hint.className='field-hint'+(v.length>0?(ok?' ok':' err'):'');
+}
+
+// ── SUMMARY ──
+function fillSum(){
+  var tot=calcTot();
+  var pn=(selPlan||'').charAt(0).toUpperCase()+(selPlan||'').slice(1);
+  document.getElementById('sump').textContent=pn+(selPlan==='corporativo'?'':' · '+PFLBL[freqN]);
+  document.getElementById('sume').textContent=eqs+(eqs===1?' equipo':' equipos');
+  document.getElementById('sumd').textContent=getFecha();
+  document.getElementById('sumt').textContent=tot?fmt(tot)+' COP':'A medida';
+}
+
+// ── SEND ──
+async function enviar(){
+  var n=document.getElementById('fn').value.trim();
+  var t=document.getElementById('ft').value.trim();
+  var e=document.getElementById('fe').value.trim();
+  var d=document.getElementById('fd').value.trim();
+  var o=document.getElementById('fo').value.trim();
+  if(!n||!t||!e||!d){toast('⚠️ Completa todos los campos obligatorios','err');return;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)){toast('⚠️ El correo no tiene un formato válido','err');return;}
+  if(!/^[0-9]{7,12}$/.test(t.replace(/\s/g,''))){toast('⚠️ Verifica el número de teléfono','err');return;}
+
+  var btn=document.getElementById('btnnext');
+  btn.disabled=true;btn.textContent='Procesando...';
+
+  var ref='DIAG-'+Date.now().toString().slice(-6);
+  var tot=calcTot();
+  var totStr=tot?fmt(tot)+' COP':'A medida';
+  var fecha=getFecha();
+  var pn=(selPlan||'').charAt(0).toUpperCase()+(selPlan||'').slice(1);
+  var adl=[];['r','b','i'].forEach(function(k){if(addons[k])adl.push({r:'Soporte remoto',b:'Respaldo nube',i:'Informe PDF'}[k]);});
+  var adlStr=adl.length?adl.join(', '):'Ninguno';
+
+  // fill conf screen
+  document.getElementById('cref').textContent=ref;
+  document.getElementById('cref2').textContent=ref;
+  document.getElementById('cnom').textContent=n;
+  document.getElementById('ctel').textContent='+57 '+t;
+  document.getElementById('cem').textContent=e;
+  document.getElementById('cfch').textContent=fecha;
+  document.getElementById('cdir').textContent=d;
+  document.getElementById('cpln').textContent=pn+' · '+eqs+(eqs===1?' equipo':' equipos');
+  document.getElementById('ctot').textContent=totStr;
+  document.getElementById('stem').className='spl ld';
+  document.getElementById('stem').innerHTML='<span class="spin"></span><span>Enviando correo...</span>';
+  document.getElementById('stwa').className='spl ld';
+  document.getElementById('stwa').innerHTML='<span class="spin"></span><span>Enviando WhatsApp...</span>';
+
+  goTo(5,1);
+  btn.disabled=false;btn.textContent=BTXT[4];
+
+  // save to Supabase
+  try{
+    await db.from('citas').insert([{
+      ref:ref,nombre:n,telefono:t,email:e,direccion:d,
+      plan:pn,equipos:eqs,
+      frecuencia:selPlan==='corporativo'?'A medida':PFLBL[freqN],
+      fecha_cita:fecha,addons:adlStr,total:totStr,
+      observaciones:o||'Ninguna',estado:'pendiente'
+    }]);
+  }catch(err){console.warn('Supabase:',err);}
+
+  await sendEmail({ref,n,e,t,d,fecha,pn,totStr,adl:adlStr,o:o||'Ninguna'});
+  var msgC='✅ *Nexora · Cita Confirmada*\n\nHola '+n+'! Tu cita ha sido agendada.\n\n📅 '+fecha+'\n📍 '+d+'\n🔧 '+pn+' · '+eqs+(eqs===1?' equipo':' equipos')+'\n💰 '+totStr+'\n🚗 Domicilio: GRATIS\n\nRef: '+ref+'\n\nTe contactaremos el día anterior para confirmar. ¡Gracias por confiar en Nexora!';
+  var msgE='🔔 *Nueva cita · Nexora*\n\nCliente: '+n+'\nTel: '+t+'\nEmail: '+e+'\nDir: '+d+'\nFecha: '+fecha+'\nPlan: '+pn+' · '+eqs+' equipos\nTotal: '+totStr+'\nAdicionales: '+adlStr+'\nRef: '+ref;
+  await sendWA(t,msgC,'stwa');
+  await sendWA(cfg.wa,msgE,null);
+}
+
+async function sendEmail(d){
+  var st=document.getElementById('stem');
+  if(!cfg.k){st.className='spl warn';st.innerHTML='⚠️ EmailJS no configurado';return;}
+  try{
+    emailjs.init(cfg.k);
+    await emailjs.send(cfg.s,cfg.tp,{
+      comprobante:d.ref,nombre:d.n,email:d.e,telefono:d.t,
+      fecha:d.fecha,servicio:'Plan '+d.pn,
+      valor:'Domicilio gratuito incluido',
+      total:d.totStr,direccion:d.d,addons:d.adl,observaciones:d.o
+    });
+    st.className='spl ok';st.innerHTML='✓ Correo enviado a '+d.e;
+  }catch(err){
+    st.className='spl err';st.innerHTML='✗ Error correo: '+(err.text||err.message||'verifica EmailJS');
+  }
+}
+async function sendWA(phone,msg,stId){
+  if(stId){var s=document.getElementById(stId);s.className='spl ld';s.innerHTML='<span class="spin"></span><span>Enviando WhatsApp...</span>';}
+  if(!cfg.cb||!phone){if(stId){var s2=document.getElementById(stId);s2.className='spl warn';s2.innerHTML='⚠️ CallMeBot no configurado';}return;}
+  var clean=phone.replace(/\D/g,'');
+  var url='https://api.callmebot.com/whatsapp.php?phone='+clean+'&text='+encodeURIComponent(msg)+'&apikey='+cfg.cb;
+  try{
+    await fetch(url,{mode:'no-cors'});
+    if(stId){var s3=document.getElementById(stId);s3.className='spl ok';s3.innerHTML='✓ WhatsApp enviado';}
+  }catch(e){
+    if(stId){var s4=document.getElementById(stId);s4.className='spl warn';s4.innerHTML='⚠️ Verifica CallMeBot';}
+  }
+}
+
+// ── TOAST ──
+function toast(msg,type){
+  var t=document.getElementById('toast');
+  document.getElementById('tmsg').textContent=msg;
+  t.className='show '+(type||'info');
+  clearTimeout(t._t);t._t=setTimeout(function(){t.className='';},3500);
+}
+
+// ── RESET ──
+function resetAll(){
+  selPlan=null;eqs=1;freqN=1;freqDisc=0;
+  addons={r:false,b:false,i:false};
+  selDay=null;selMon=null;selYr=null;selHour=null;
+  ['r','b','i'].forEach(function(k){document.getElementById('tog'+k).classList.remove('on');});
+  ['basico','empresarial','corporativo'].forEach(function(k){document.getElementById('pc-'+k).classList.remove('sel');});
+  ['fn','ft','fe','fd','fo'].forEach(function(id){
+    var el=document.getElementById(id);el.value='';
+    el.classList.remove('valid','invalid');
+  });
+  document.querySelectorAll('.field-hint').forEach(function(e){e.textContent='';e.className='field-hint';});
+  document.querySelectorAll('.fo').forEach(function(e,i){e.classList.toggle('sel',i===0);});
+  document.getElementById('hrs-card').style.display='none';
+  document.getElementById('hrs-waiting').style.display='block';
+  for(var i=1;i<TOTAL;i++){var s=document.getElementById('s'+i);s.className='scr';s.style.cssText='';}
+  var s0=document.getElementById('s0');s0.className='scr active';s0.style.cssText='';
+  cur=0;
+  document.getElementById('pgf').style.width='0%';
+  updateFtr();
+  document.getElementById('s0').scrollTop=0;
+}
+
+// Init
+updateFtr();
+renderCal();
+</script>
+</body>
+</html>
